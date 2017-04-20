@@ -59,10 +59,11 @@
 
 // Definitions to make life easier
 #define CS LATBbits.LATB7       // chip select pin
-#define IMU_Address = 0b1101011 // Address for the IMU
-#define reg_Accel = 0x10
-#define reg_Gyro = 0x11
-#define reg_Contr = 0x12
+#define IMU_Address 0b1101011 // Address for the IMU
+#define reg_Accel 0x10
+#define reg_Gyro 0x11
+#define reg_Contr 0x12
+#define reg_OUT_TEMP_L 0x20
 
 
 // Color Definitions
@@ -329,27 +330,55 @@ void draw_HLine(unsigned short x1, unsigned short y1, int length, int thickness,
 void IMU_init(void)
 {
     // Initializes the IMU
+    unsigned char sendbyte;
     
     i2c_master_start();
-    unsigned char sendbyte = (IMU_Address << 1)|(0b00000000);// Writing    
+    sendbyte = (IMU_Address << 1)|(0b00000000);// Writing    
     i2c_master_send(sendbyte); // Send Device ID with Write Byte
     i2c_master_send(reg_Accel); // CTRL1_XL Register
     i2c_master_send(0b10000010); //1.66 kHz [1000], 2g [00], 100 Hz Filter [10]
     i2c_master_stop();
     
     i2c_master_start();
-    unsigned char sendbyte = (IMU_Address << 1)|(0b00000000);// Writing    
+    sendbyte = (IMU_Address << 1)|(0b00000000);// Writing    
     i2c_master_send(sendbyte); // Send Device ID with Write Byte
     i2c_master_send(reg_Gyro); // CTRL2_G Register
     i2c_master_send(0b10001000); // 1.66kHz [1000], 1000 dps sense [10], [00]
     i2c_master_stop();
     
     i2c_master_start();
-    unsigned char sendbyte = (IMU_Address << 1)|(0b00000000);// Writing    
+    sendbyte = (IMU_Address << 1)|(0b00000000);// Writing    
     i2c_master_send(sendbyte); // Send Device ID with Write Byte
     i2c_master_send(reg_Contr); // CTRL3_C Register
     i2c_master_send(0b00000100); // [00000100]
     i2c_master_stop();
+}
+
+void I2C_read_multiple(unsigned char address, unsigned char regRead, unsigned char * data, int length)
+{
+    // Read from registers
+    i2c_master_start();
+    unsigned char sendbyte = (IMU_Address << 1)|(0b00000001);// Reading    
+    i2c_master_send(sendbyte); // Send Device ID with Read Byte
+    i2c_master_send(regRead); // The first reading byte
+    i2c_master_restart();
+    
+    int i = 0;
+    // Read all data
+    for(i = 0; i<length;i++)
+    {
+        *data[i] = i2c_master_recv(); // Receive current register
+        if(i == length-1)
+        {
+            i2c_master_ack(1);
+        }
+        else
+        {
+            i2c_master_ack(0);
+        }
+    }
+    
+    i2c_master_stop(); // End Comms
     
 }
 
@@ -394,14 +423,19 @@ int main() {
     sprintf(message,"Hello, World ");
     draw_Message(10, 10, message, colorRED, colorWHITE,1 );
     
+    // Initialize the IMU
+    IMU_init();
+    
          
     while(1) {
         
-        // Wait for 0.001 s
+        // Wait for 0.1 s
         if(_CP0_GET_COUNT()>timetoWait)
         {          
             _CP0_SET_COUNT(0);
-
+            unsigned char data[];
+            I2C_read_multiple(IMU_Address, reg_OUT_TEMP_L, data, 14);
+            1;
         }
     }
 }
