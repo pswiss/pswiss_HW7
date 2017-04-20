@@ -473,6 +473,11 @@ int main() {
             Accel_Y= (data[11]<<8)|data[10];
             Accel_Z= (data[13]<<8)|data[12];
             
+            sprintf(message,"xAccel: %0.3f g", 2.0*(float)Accel_X/32767.0);
+            draw_Message(10, 110, message, colorRED, colorWHITE,1 );
+            sprintf(message,"yAccel: %0.3f g", 2.0*(float)Accel_Y/32767.0);
+            draw_Message(10, 120, message, colorGREEN, colorWHITE,1 );
+            
         }
     }
 }
