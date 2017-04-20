@@ -356,18 +356,22 @@ void IMU_init(void)
 
 void I2C_read_multiple(unsigned char address, unsigned char regRead, unsigned char * data, int length)
 {
+    unsigned char sendbyte;
+    
     // Read from registers
     i2c_master_start();
-    unsigned char sendbyte = (IMU_Address << 1)|(0b00000001);// Reading    
-    i2c_master_send(sendbyte); // Send Device ID with Read Byte
-    i2c_master_send(regRead); // The first reading byte
+    sendbyte = (IMU_Address << 1)|(0b00000000);// Writing    
+    i2c_master_send(sendbyte); // Send Device ID with Write Byte
+    i2c_master_send(regRead); // The Register to read
     i2c_master_restart();
+    sendbyte = (IMU_Address << 1)|(0b00000001);// Reading    
+    i2c_master_send(sendbyte); // Send Device ID with Read Byte
     
     int i = 0;
     // Read all data
     for(i = 0; i<length;i++)
     {
-        *data[i] = i2c_master_recv(); // Receive current register
+        data[i] = i2c_master_recv(); // Receive current register
         if(i == length-1)
         {
             i2c_master_ack(1);
@@ -420,11 +424,27 @@ int main() {
 
     // Draw initial message to screen
     char message[100];
-    sprintf(message,"Hello, World ");
+    sprintf(message,"SYSTEM ON");
     draw_Message(10, 10, message, colorRED, colorWHITE,1 );
     
     // Initialize the IMU
     IMU_init();
+    
+    // Read WHOAMI
+    // Read current state of the expander
+    i2c_master_start();
+    unsigned char sendbyte = (IMU_Address << 1)|(0b00000000);// Writing
+    i2c_master_send(sendbyte); // Send opcode, write
+    i2c_master_send(0x0F); // "WHO AM I" - Jackie Chan
+    i2c_master_restart();
+    sendbyte = (IMU_Address << 1)|(0b00000001);// Reading
+    i2c_master_send(sendbyte); // Send opcode, read
+    unsigned char checkWhoAmI = i2c_master_recv(); // Receive current state of GPIO
+    i2c_master_ack(1);
+    i2c_master_stop();
+    
+    sprintf(message,"WHO AM I? 0x%x", checkWhoAmI);
+    draw_Message(10, 10, message, colorBLACK, colorWHITE,1 );
     
          
     while(1) {
@@ -433,9 +453,10 @@ int main() {
         if(_CP0_GET_COUNT()>timetoWait)
         {          
             _CP0_SET_COUNT(0);
-            unsigned char data[];
+            unsigned char data[14];
             I2C_read_multiple(IMU_Address, reg_OUT_TEMP_L, data, 14);
-            1;
+            sprintf(message,"%d", data[3]);
+            draw_Message(50, 50, message, colorRED, colorWHITE,1 );
         }
     }
 }
