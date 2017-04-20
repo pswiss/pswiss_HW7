@@ -298,7 +298,7 @@ void draw_Message(unsigned short x, unsigned short y, char* message, unsigned sh
     }
 }
 
-void draw_Rectanle(unsigned short x1, unsigned short x2, unsigned short y1, unsigned short y2,  unsigned short frontColor)
+void draw_Rectangle(unsigned short x1, unsigned short x2, unsigned short y1, unsigned short y2,  unsigned short frontColor)
 {
     int i = 0;
     int j = 0;
@@ -318,13 +318,57 @@ void draw_HLine(unsigned short x1, unsigned short y1, int length, int thickness,
     int i = 0;
     int j = 0;
     
-    for(i = 0;i<length;i++)
+    if(length >0)
     {
-        for(j=-thickness/2;j<thickness/2;j++)
+        for(i = 0;i<length;i++)
         {
-            LCD_drawPixel(x1+i,y1+j,frontColor);
+            for(j=-thickness/2;j<thickness/2;j++)
+            {
+                LCD_drawPixel(x1+i,y1+j,frontColor);
+            }
         }
     }
+    else
+    {
+        for(i = 0;i<fabs(length);i++)
+        {
+            for(j=-thickness/2;j<thickness/2;j++)
+            {
+                LCD_drawPixel(x1-i,y1+j,frontColor);
+            }
+        }
+    }
+    
+    
+}
+
+
+void draw_VLine(unsigned short x1, unsigned short y1, int length, int thickness,unsigned short frontColor)
+{
+    int i = 0;
+    int j = 0;
+    
+    if(length >0)
+    {
+        for(i = 0;i<length;i++)
+        {
+            for(j=-thickness/2;j<thickness/2;j++)
+            {
+                LCD_drawPixel(x1+j,y1+i,frontColor);
+            }
+        }
+    }
+    else
+    {
+        for(i = 0;i<fabs(length);i++)
+        {
+            for(j=-thickness/2;j<thickness/2;j++)
+            {
+                LCD_drawPixel(x1+j,y1-i,frontColor);
+            }
+        }
+    }
+    
 }
 
 void IMU_init(void)
@@ -447,13 +491,13 @@ int main() {
     draw_Message(10, 10, message, colorBLACK, colorWHITE,1 );
     
     // Define Variables
-    short Temperature;
-    short Gyro_X;
-    short Gyro_Y;
-    short Gyro_Z;
-    short Accel_X;
-    short Accel_Y;
-    short Accel_Z;
+    short temperature;
+    short gyroX;
+    short gyroY;
+    short gyroZ;
+    short accelX;
+    short accelY;
+    short accelZ;
          
     while(1) {
         
@@ -465,18 +509,26 @@ int main() {
             I2C_read_multiple(IMU_Address, reg_OUT_TEMP_L, data, 14);
             
             // Shift Data into variables
-            Temperature = (data[1]<<8)|data[0];
-            Gyro_X= (data[3]<<8)|data[2];
-            Gyro_Y= (data[5]<<8)|data[4];
-            Gyro_Z= (data[7]<<8)|data[6];
-            Accel_X= (data[9]<<8)|data[8];
-            Accel_Y= (data[11]<<8)|data[10];
-            Accel_Z= (data[13]<<8)|data[12];
-            
-            sprintf(message,"xAccel: %0.3f g", 2.0*(float)Accel_X/32767.0);
+            temperature = (data[1]<<8)|data[0];
+            gyroX= (data[3]<<8)|data[2];
+            gyroY= (data[5]<<8)|data[4];
+            gyroZ= (data[7]<<8)|data[6];
+            accelX= (data[9]<<8)|data[8];
+            accelY= (data[11]<<8)|data[10];
+            accelZ= (data[13]<<8)|data[12];
+            // Display the accelerations
+            sprintf(message,"xAccel: %0.2f g", 2.0*(float)accelX/32767.0);
             draw_Message(10, 110, message, colorRED, colorWHITE,1 );
-            sprintf(message,"yAccel: %0.3f g", 2.0*(float)Accel_Y/32767.0);
+            sprintf(message,"yAccel: %0.2f g", 2.0*(float)accelY/32767.0);
             draw_Message(10, 120, message, colorGREEN, colorWHITE,1 );
+                        
+            // Clear Line Areas
+            draw_HLine(0, 65, 130, 5, colorWHITE);
+            draw_VLine(65, 20, 90, 5, colorWHITE);
+            
+            // Draw Lines
+            draw_HLine(65, 65,-100.0*(float)accelX/32767.0, 5, colorRED);
+            draw_VLine(65, 65,-100.0*(float)accelY/32767.0, 5, colorGREEN);
             
         }
     }
