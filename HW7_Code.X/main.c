@@ -446,6 +446,14 @@ int main() {
     sprintf(message,"WHO AM I? 0x%x", checkWhoAmI);
     draw_Message(10, 10, message, colorBLACK, colorWHITE,1 );
     
+    // Define Variables
+    short Temperature;
+    short Gyro_X;
+    short Gyro_Y;
+    short Gyro_Z;
+    short Accel_X;
+    short Accel_Y;
+    short Accel_Z;
          
     while(1) {
         
@@ -455,8 +463,16 @@ int main() {
             _CP0_SET_COUNT(0);
             unsigned char data[14];
             I2C_read_multiple(IMU_Address, reg_OUT_TEMP_L, data, 14);
-            sprintf(message,"%d", data[3]);
-            draw_Message(50, 50, message, colorRED, colorWHITE,1 );
+            
+            // Shift Data into variables
+            Temperature = (data[1]<<8)|data[0];
+            Gyro_X= (data[3]<<8)|data[2];
+            Gyro_Y= (data[5]<<8)|data[4];
+            Gyro_Z= (data[7]<<8)|data[6];
+            Accel_X= (data[9]<<8)|data[8];
+            Accel_Y= (data[11]<<8)|data[10];
+            Accel_Z= (data[13]<<8)|data[12];
+            
         }
     }
 }
