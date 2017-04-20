@@ -3,8 +3,7 @@
 # include<math.h>       // I like to do math
 #include<stdio.h>
 #include"ILI9163C.h"
-
-
+#include"I2C2_Commands.h"
 
 // DEVCFG0
 #pragma config DEBUG = ON // no debugging
@@ -58,8 +57,9 @@
 
 // B8 is turned into SDI1 but is not used or connected to anything
 
-
+// Definitions to make life easier
 #define CS LATBbits.LATB7       // chip select pin
+#define IMU_Address = 0b1101011;
 
 // Color Definitions
 // Color: RRRRR GGGGGG BBBBB
@@ -404,26 +404,16 @@ int main() {
     // Initialize the Timer
     _CP0_SET_COUNT(0);
     
-    int timetoWait = 48000000*0.001/2;      // 1000hz
-    int numberTimerLimit = 48000000*0.2/2; // 5hz
+    int timetoWait = 48000000*0.1/2;      // 10hz
     int numberTimer = 0;
-    
-    // Number Counter
-    int numberCountMin = 0;
-    int numberCountMax = 100;
-    int numberCount = numberCountMin;
-    int oldNumber = numberCountMax-1;
-    
-    // FPS
-    float fps = 0;
-    unsigned long timeElapsed = 0;
     
     // Configure Bits
     ANSELA = 0;
     ANSELB = 0;
     
-    // Initialize the SPI communication
+    // Initialize communications
     SPI1_init();
+    i2c_master_setup();
     // Initialize the LCD
     LCD_init();
     LCD_clearScreen(colorWHITE);
@@ -433,66 +423,14 @@ int main() {
     sprintf(message,"Hello, World ");
     draw_Message(10, 10, message, colorRED, colorWHITE,1 );
     
-    numberCount--; // Only for startup
-    sprintf(message,"%d !   ",numberCount);
-    draw_Message(10+13*charWidth, 10, message, colorBLUE, colorWHITE,1.5);
-    
-    // Print an entire Line and measure how long it takes
-    _CP0_SET_COUNT(0);
-    sprintf(message,"ABCDEFGHIJKLMNOPQRSTUVWXYZ"); // Generate new string and print it
-    draw_Message(0, 60, message, colorORANGE, colorBLACK,1);
-    float timeToWrite = _CP0_GET_COUNT()/(48000000.0/2);
-    sprintf(message,"T_line %0.6f",timeToWrite); // Generate new string and print it
-    draw_Message(10, 70, message, colorPURPLE, colorCYAN,1);
-     _CP0_SET_COUNT(0);
-     
-     // Print the FPS label
-     sprintf(message," FPS:         "); // Generate new string and print it
-    draw_Message(5, 110, message, colorORANGE, colorBLACK,2);
-    
+         
     while(1) {
         
         // Wait for 0.001 s
         if(_CP0_GET_COUNT()>timetoWait)
-        {
-            numberTimer = numberTimer + _CP0_GET_COUNT();
-            
+        {          
             _CP0_SET_COUNT(0);
-                                   
-            if(numberTimer>=numberTimerLimit)
-            {
-                timeElapsed = _CP0_GET_COUNT(); // FPS Calc
-                
-                // Number
-                numberTimer= 0; // Reset Timer
-                numberCount++;  // Increment Number
-                oldNumber++;
-                if(numberCount > numberCountMax)    
-                {
-                    numberCount = numberCountMin; // Resent Number if needed
-                    draw_Line(15, 35, numberCountMax, 5,colorWHITE);
-                }
-                /*if(oldNumber > numberCountMax)    
-                {
-                    oldNumber = numberCountMin; // Reset Number if needed
-                }*/
-                sprintf(message,"%d!  ",numberCount); // Generate new string and print it
-                draw_Message(10+13*charWidth, 10, message, colorBLUE, colorWHITE,1.5);
-                
-                // Draw Progress Bar
-                //draw_ProgressBar(10, 120, 25, 30, numberCount, oldNumber, numberCountMin, numberCountMax, colorGREEN, colorYELLOW);
-                
-                draw_Line(15, 35, numberCount, 5,colorGREEN);
-                
-                
-                // Calculate FPS
-                timeElapsed = _CP0_GET_COUNT()-timeElapsed;
-                fps = 1.0/ ((float)timeElapsed/(48000000.0/2.0));
-                
-                sprintf(message,"%0.2f ",fps); // Generate new string and print it
-                draw_Message(55, 110, message, colorORANGE, colorBLACK,2);
 
-            }     
         }
     }
 }
