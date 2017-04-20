@@ -59,7 +59,11 @@
 
 // Definitions to make life easier
 #define CS LATBbits.LATB7       // chip select pin
-#define IMU_Address = 0b1101011;
+#define IMU_Address = 0b1101011 // Address for the IMU
+#define reg_Accel = 0x10
+#define reg_Gyro = 0x11
+#define reg_Contr = 0x12
+
 
 // Color Definitions
 // Color: RRRRR GGGGGG BBBBB
@@ -293,65 +297,6 @@ void draw_Message(unsigned short x, unsigned short y, char* message, unsigned sh
     }
 }
 
-void draw_ProgressBar(unsigned short x1, unsigned short x2, unsigned short y1, unsigned short y2, int numberRep, int prevNumber, int numberMin, int numberMax, unsigned short frontColor, unsigned short backColor )
-{
-    // Calculate new and old percents
-    float pct = ((float)numberRep-(float)numberMin)/((float)numberMax-(float)numberMin);
-    float oldpct = ((float)prevNumber-(float)numberMin)/((float)numberMax-(float)numberMin);
-    // Pre-Calc the range
-    float dispRange = x2-x1;
-    // Initialize Variables
-    char amActive = 0;
-    char wasActive = 0;
-    int i = 0;
-    int j = 0;
-    
-    // Loop through rows
-    for(i = 0; i<dispRange;i++) 
-    {
-        // Check if active
-        if(((float)i/dispRange)<=pct)
-        {
-            amActive = 1;
-        }
-        else
-        {
-            amActive = 0;
-        }
-        // Check if was Active
-        if(((float)i/dispRange)<=oldpct)
-        {
-            wasActive = 1;
-        }
-        else
-        {
-            wasActive = 0;
-        }
-        
-        // Loop through columns
-        for(j = 0; j<y2-y1;j++)
-        {
-            // EFFICIENT
-            if((amActive==1)&&(wasActive==0)) // Pixel has changed
-            {
-                LCD_drawPixel(x1+i,y1+j,frontColor);
-            }
-            if((amActive==0)&&(wasActive==1)) // Pixel has changed
-            {
-                LCD_drawPixel(x1+i,y1+j,backColor);
-            }
-            /*if(amActive==1) // INEFFICIENT
-            {
-                LCD_drawPixel(x1+i,y1+j,frontColor);
-            }
-            else
-            {
-                LCD_drawPixel(x1+i,y1+j,backColor);
-            }*/
-        }
-    }
-}
-
 void draw_Rectanle(unsigned short x1, unsigned short x2, unsigned short y1, unsigned short y2,  unsigned short frontColor)
 {
     int i = 0;
@@ -367,7 +312,7 @@ void draw_Rectanle(unsigned short x1, unsigned short x2, unsigned short y1, unsi
     }
 }
 
-void draw_Line(unsigned short x1, unsigned short y1, int length, int thickness,unsigned short frontColor)
+void draw_HLine(unsigned short x1, unsigned short y1, int length, int thickness,unsigned short frontColor)
 {
     int i = 0;
     int j = 0;
@@ -379,6 +324,33 @@ void draw_Line(unsigned short x1, unsigned short y1, int length, int thickness,u
             LCD_drawPixel(x1+i,y1+j,frontColor);
         }
     }
+}
+
+void IMU_init(void)
+{
+    // Initializes the IMU
+    
+    i2c_master_start();
+    unsigned char sendbyte = (IMU_Address << 1)|(0b00000000);// Writing    
+    i2c_master_send(sendbyte); // Send Device ID with Write Byte
+    i2c_master_send(reg_Accel); // CTRL1_XL Register
+    i2c_master_send(0b10000010); //1.66 kHz [1000], 2g [00], 100 Hz Filter [10]
+    i2c_master_stop();
+    
+    i2c_master_start();
+    unsigned char sendbyte = (IMU_Address << 1)|(0b00000000);// Writing    
+    i2c_master_send(sendbyte); // Send Device ID with Write Byte
+    i2c_master_send(reg_Gyro); // CTRL2_G Register
+    i2c_master_send(0b10001000); // 1.66kHz [1000], 1000 dps sense [10], [00]
+    i2c_master_stop();
+    
+    i2c_master_start();
+    unsigned char sendbyte = (IMU_Address << 1)|(0b00000000);// Writing    
+    i2c_master_send(sendbyte); // Send Device ID with Write Byte
+    i2c_master_send(reg_Contr); // CTRL3_C Register
+    i2c_master_send(0b00000100); // [00000100]
+    i2c_master_stop();
+    
 }
 
 int main() {
@@ -398,7 +370,6 @@ int main() {
     DDPCONbits.JTAGEN = 0;
 
     // do your TRIS and LAT commands here
-
     __builtin_enable_interrupts();
         
     // Initialize the Timer
